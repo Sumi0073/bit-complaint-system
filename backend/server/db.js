@@ -4,16 +4,12 @@ import bcrypt from 'bcryptjs';
 
 dotenv.config();
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 const pool = new pg.Pool({
-    user: process.env.DB_USER,
-    host: process.env.DB_HOST,
-    database: process.env.DB_NAME,
-    password: process.env.DB_PASSWORD,
-    port: parseInt(process.env.DB_PORT || '5432'),
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  connectionString: isProduction ? process.env.DATABASE_URL : `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`,
+  ssl: isProduction ? { rejectUnauthorized: false } : false
 });
-
-
 
 // Test database connection
 pool.connect((err, client, done) => {
