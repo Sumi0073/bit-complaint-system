@@ -8,8 +8,9 @@ import { pool, query } from './db.js';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5432;
+const PORT = process.env.PORT || 5000;
 
+// Allow all origins in production since frontend URL might vary
 app.use(cors());
 app.use(express.json());
 
@@ -56,7 +57,7 @@ const authenticateToken = (req, res, next) => {
     req.user = verified;
     next();
   } catch (error) {
-    res.status(400).json({ error: 'Invalid token' });
+    res.status(401).json({ error: 'Invalid token' });
   }
 };
 
@@ -67,12 +68,12 @@ const isAdmin = async (req, res, next) => {
       [req.user.id]
     );
 
-    if (userResult.rows[0].email !== 'admin@bitmesra.ac.in') {
+    if (!userResult.rows.length || userResult.rows[0].email !== 'admin@bitmesra.ac.in') {
       return res.status(403).json({ error: 'Access denied. Admin only.' });
     }
     next();
   } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Server error checking admin status' });
   }
 };
 
@@ -87,7 +88,7 @@ app.post('/api/auth/signup', async (req, res) => {
     );
 
     if (userExists.rows.length > 0) {
-      return res.status(400).json({ error: 'User already exists' });
+      return res.status(400).json({ error: 'User already exists with this email or employee ID' });
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -107,7 +108,7 @@ app.post('/api/auth/signup', async (req, res) => {
     res.json({ user: result.rows[0], token });
   } catch (error) {
     console.error('Signup error:', error);
-    res.status(500).json({ error: 'Server error during signup' });
+    res.status(500).json({ error: 'Error creating user account' });
   } finally {
     client.release();
   }
@@ -118,16 +119,19 @@ app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     
-    const result = await client.query('SELECT * FROM users WHERE email = $1', [email]);
+    const result = await client.query(
+      'SELECT * FROM users WHERE email = $1',
+      [email]
+    );
     
     if (result.rows.length === 0) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ error: 'Invalid email or password' });
     }
 
     const validPassword = await bcrypt.compare(password, result.rows[0].password_hash);
 
     if (!validPassword) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ error: 'Invalid email or password' });
     }
 
     const { password_hash, security_question, security_answer, ...user } = result.rows[0];
@@ -136,7 +140,7 @@ app.post('/api/auth/login', async (req, res) => {
     res.json({ user, token });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ error: 'Server error during login' });
+    res.status(500).json({ error: 'Error during login' });
   } finally {
     client.release();
   }
