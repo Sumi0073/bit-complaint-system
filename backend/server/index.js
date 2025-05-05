@@ -8,19 +8,9 @@ import { pool, query } from './db.js';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5432;
 
-const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://yourdomain.com']
-    : ['http://localhost:5173'],
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
-  maxAge: 600
-};
-
-app.use(cors(corsOptions));
+app.use(cors());
 app.use(express.json());
 
 const rateLimit = new Map();
@@ -117,7 +107,7 @@ app.post('/api/auth/signup', async (req, res) => {
     res.json({ user: result.rows[0], token });
   } catch (error) {
     console.error('Signup error:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Server error during signup' });
   } finally {
     client.release();
   }
@@ -146,7 +136,7 @@ app.post('/api/auth/login', async (req, res) => {
     res.json({ user, token });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Server error during login' });
   } finally {
     client.release();
   }
