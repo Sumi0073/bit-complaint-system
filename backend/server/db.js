@@ -1,41 +1,32 @@
-import bcrypt from 'bcryptjs';
-import dotenv from 'dotenv';
 import pg from 'pg';
+import dotenv from 'dotenv';
+import bcrypt from 'bcryptjs';
 
 dotenv.config();
 
 const isProduction = process.env.NODE_ENV === 'production';
 
 const pool = new pg.Pool({
-<<<<<<< HEAD
-  connectionString: isProduction ? process.env.DATABASE_URL : `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`,
+  connectionString: process.env.DATABASE_URL,
   ssl: isProduction ? { rejectUnauthorized: false } : false
-=======
-    user: process.env.DB_USER,
-    host: process.env.DB_HOST,
-    database: process.env.DB_NAME,
-    password: process.env.DB_PASSWORD,
-    port: parseInt(process.env.DB_PORT || '5432'),
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
->>>>>>> 6768dcb (Moved frontend files into frontend/ directory)
 });
 
 // Test database connection
 pool.connect((err, client, done) => {
-    if (err) {
-        console.error('Error connecting to the database:', err);
-    } else {
-        console.log('Successfully connected to PostgreSQL database');
-        done();
-    }
+  if (err) {
+    console.error('Error connecting to the database:', err);
+  } else {
+    console.log('Successfully connected to PostgreSQL database');
+    done();
+  }
 });
 
 // Initialize database tables
-const initDb = async() => {
-    const client = await pool.connect();
-    try {
-        // Create users table with security question fields
-        await client.query(`
+const initDb = async () => {
+  const client = await pool.connect();
+  try {
+    // Create users table with security question fields
+    await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         email VARCHAR(255) UNIQUE NOT NULL,
@@ -51,8 +42,8 @@ const initDb = async() => {
       );
     `);
 
-        // Create complaints table
-        await client.query(`
+    // Create complaints table
+    await client.query(`
       CREATE TABLE IF NOT EXISTS complaints (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id),
@@ -70,60 +61,62 @@ const initDb = async() => {
       );
     `);
 
-        // Check if admin user exists
-        const adminExists = await client.query(
-            'SELECT * FROM users WHERE email = $1', ['admin@bitmesra.ac.in']
-        );
+    // Check if admin user exists
+    const adminExists = await client.query(
+      'SELECT * FROM users WHERE email = $1',
+      ['admin@bitmesra.ac.in']
+    );
 
-        // Create or update admin user
-        if (adminExists.rows.length === 0) {
-            const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash('admin', salt);
+    // Create or update admin user
+    if (adminExists.rows.length === 0) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash('admin', salt);
 
-            await client.query(
-                `INSERT INTO users (
+      await client.query(
+        `INSERT INTO users (
           email, password_hash, name, designation, employee_id,
           security_question, security_answer
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7)`, [
-                    'admin@bitmesra.ac.in',
-                    hashedPassword,
-                    'Admin User',
-                    'staff',
-                    'ADMIN001',
-                    'lastName',
-                    'admin'
-                ]
-            );
-            console.log('Admin user created successfully');
-        }
-
-        console.log('Database tables initialized successfully');
-    } catch (error) {
-        console.error('Error initializing database:', error);
-    } finally {
-        client.release();
+        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          'admin@bitmesra.ac.in',
+          hashedPassword,
+          'Admin User',
+          'staff',
+          'ADMIN001',
+          'lastName',
+          'admin'
+        ]
+      );
+      console.log('Admin user created successfully');
     }
+
+    console.log('Database tables initialized successfully');
+  } catch (error) {
+    console.error('Error initializing database:', error);
+  } finally {
+    client.release();
+  }
 };
 
 // Initialize database
 initDb().catch(console.error);
 
-export const query = async(text, params) => {
-    const client = await pool.connect();
-    try {
-        const result = await client.query(text, params);
-        return result;
-    } catch (error) {
-        console.error('Database query error:', error);
-        throw error;
-    } finally {
-        client.release();
-    }
+export const query = async (text, params) => {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(text, params);
+    return result;
+  } catch (error) {
+    console.error('Database query error:', error);
+    throw error;
+  } finally {
+    client.release();
+  }
 };
 
-export const getClient = async() => {
-    return await pool.connect();
+export const getClient = async () => {
+  return await pool.connect();
 };
 
 export { pool };
