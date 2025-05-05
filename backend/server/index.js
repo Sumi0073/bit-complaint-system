@@ -8,7 +8,7 @@ import { pool, query } from './db.js';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5432;
 
 // Allow all origins in production since frontend URL might vary
 app.use(cors());
